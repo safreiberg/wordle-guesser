@@ -30,7 +30,7 @@ public class Dictionary {
     public static Dictionary parseFromDefaultLocation() {
         try {
             List<String> lines = FileUtils.readLines(new File(DICTIONARY_LOCATION), StandardCharsets.UTF_8);
-            return new Dictionary(ImmutableSet.copyOf(lines));
+            return new Dictionary(ImmutableSet.copyOf(lines.stream().map(String::intern).collect(Collectors.toSet())));
         } catch (IOException e) {
             throw new RuntimeException("unable to load from dictionary", e);
         }
@@ -50,6 +50,10 @@ public class Dictionary {
 
     public Dictionary filterToValid(KnownState known) {
         return new Dictionary(ImmutableSet.copyOf(words.stream().filter(known::satisfies).collect(Collectors.toSet())));
+    }
+
+    public int sizeAfterFiltering(KnownState known) {
+        return (int) words.stream().filter(known::satisfies).count();
     }
 
     public int size() {
@@ -75,7 +79,7 @@ public class Dictionary {
         return map;
     }
 
-    public ImmutableSet<String> getWords() {
+    public Set<String> getWords() {
         return this.words;
     }
 

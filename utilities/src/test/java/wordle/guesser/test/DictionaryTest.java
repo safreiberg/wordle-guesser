@@ -19,9 +19,9 @@ public class DictionaryTest {
         Dictionary dictionary = Dictionary.ofWords(ImmutableSet.of("ALOFT", "arise", "foo"))
                 .filterTo(new WordleFilter())
                 .uppercase();
-        assertThat(dictionary.size()).isEqualTo(2);
-        assertThat(dictionary.contains("ALOFT")).isTrue();
-        assertThat(dictionary.aggregateLetterCount().get('A')).isEqualTo(2);
+        assertThat(dictionary.size()).isEqualTo(1);
+        assertThat(dictionary.contains("ARISE")).isTrue();
+        assertThat(dictionary.aggregateLetterCount().get('A')).isEqualTo(1);
     }
 
     @Test
@@ -47,7 +47,7 @@ public class DictionaryTest {
         Dictionary dict = Dictionary.defaultWordleDictionary();
 
         KnownState knownState = new KnownState();
-        GuessScorer guessScorer = new GuessScorer(5);
+        GuessScorer guessScorer = new GuessScorer(5, dict);
         guessScorer.process(dict, knownState);
         System.out.println(guessScorer);
         System.out.println(guessScorer.getBestGuess());

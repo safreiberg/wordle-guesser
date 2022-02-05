@@ -4,6 +4,7 @@
 package wordle.guesser.app;
 
 
+import com.google.common.collect.Ordering;
 import wordle.guesser.utilities.Dictionary;
 import wordle.guesser.utilities.GuessScorer;
 import wordle.guesser.utilities.KnownState;
@@ -16,8 +17,8 @@ import java.util.Arrays;
 public class App {
     public static void main(String[] args) throws IOException {
         KnownState knownState = new KnownState();
-        GuessScorer guessScorer = new GuessScorer(5);
         Dictionary dict = Dictionary.defaultWordleDictionary();
+        GuessScorer guessScorer = new GuessScorer(5, dict);
 
         System.out.println("Welcome to wordleguesser!");
         System.out.println("The app will present you with a guess.");
@@ -68,7 +69,11 @@ public class App {
         int n = 0;
         while (true) {
             guessScorer.process(dict, knownState);
-            System.out.println("Current dictionary size: " + dict.filterToValid(knownState).size());
+            Dictionary remaining = dict.filterToValid(knownState);
+            System.out.println("Current dictionary size: " + remaining.size());
+            if (remaining.size() < 100) {
+                System.out.println("Remaining words: " + Ordering.natural().sortedCopy(remaining.getWords()));
+            }
             System.out.println("The current best guesses are: " + guessScorer.printState());
             System.out.println("Your next guess is: " + guessScorer.getBestGuess());
             String currentGuess = guessScorer.getBestGuess();

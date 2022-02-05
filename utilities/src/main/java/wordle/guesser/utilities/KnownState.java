@@ -1,21 +1,34 @@
 package wordle.guesser.utilities;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
-
 import java.util.*;
 
 public class KnownState {
 
-    private final Multimap<Character, Integer> requiredLetterWrongSpot;
+    private final Map<Character, Set<Integer>> requiredLetterWrongSpot;
     private final Map<Integer, Character> requiredLocations;
     private final Set<Character> notInWord;
     private final Set<String> alreadyGuessedWords = new HashSet<>();
 
     public KnownState() {
-        this.requiredLetterWrongSpot = HashMultimap.create();
+        this.requiredLetterWrongSpot = new HashMap<>();
         this.requiredLocations = new HashMap<>();
         this.notInWord = new HashSet<>();
+    }
+
+    public boolean isEmpty() {
+        return requiredLetterWrongSpot.isEmpty() && requiredLocations.isEmpty()
+                && notInWord.isEmpty() && alreadyGuessedWords.isEmpty();
+    }
+
+    public KnownState deepCopy() {
+        KnownState copy = new KnownState();
+        copy.notInWord.addAll(notInWord);
+        copy.requiredLocations.putAll(requiredLocations);
+        copy.alreadyGuessedWords.addAll(alreadyGuessedWords);
+        for (Map.Entry<Character, Set<Integer>> entry : requiredLetterWrongSpot.entrySet()) {
+            copy.requiredLetterWrongSpot.put(entry.getKey(), new HashSet<>(entry.getValue()));
+        }
+        return copy;
     }
 
     public enum Outcome {
@@ -38,7 +51,8 @@ public class KnownState {
                     this.requiredLocations.put(i, character);
                     break;
                 case WRONG_SPOT:
-                    this.requiredLetterWrongSpot.put(character, i);
+                    this.requiredLetterWrongSpot.putIfAbsent(character, new HashSet<>());
+                    this.requiredLetterWrongSpot.get(character).add(i);
                     break;
                 case NOT_IN_WORD:
                     this.notInWord.add(character);
@@ -53,33 +67,27 @@ public class KnownState {
             return false;
         }
         char[] chars = word.toCharArray();
-        for (char aChar : chars) {
-            if (notInWord.contains(aChar)) {
+        for (int i = 0; i < chars.length; i++) {
+            Character character = chars[i];
+            if (notInWord.contains(character)) {
+                return false;
+            }
+            if (requiredLocations.containsKey(i) && requiredLocations.get(i) != character) {
+                return false;
+            }
+            if (requiredLetterWrongSpot.containsKey(character) && requiredLetterWrongSpot.get(character).contains(i)) {
                 return false;
             }
         }
-        for (Map.Entry<Character, Collection<Integer>> entry : requiredLetterWrongSpot.asMap().entrySet()) {
-            // guarantees letter is in the word.
-            Character requiredChar = entry.getKey();
-            boolean found = false;
-            for (char inWord : chars) {
-                if (inWord == requiredChar) {
-                    found = true;
+        for (Character character : requiredLetterWrongSpot.keySet()) {
+            boolean seen = false;
+            for (Character inWord : chars) {
+                if (inWord == character) {
+                    seen = true;
+                    break;
                 }
             }
-            if (!found) {
-                return false;
-            }
-            // guarantees the letter is not at a disallowed location
-            Collection<Integer> disallowedLocations = entry.getValue();
-            for (int i = 0; i < chars.length; i++) {
-                if (chars[i] == requiredChar && disallowedLocations.contains(i)) {
-                    return false;
-                }
-            }
-        }
-        for (Map.Entry<Integer, Character> entry : requiredLocations.entrySet()) {
-            if (chars[entry.getKey()] != entry.getValue()) {
+            if (!seen) {
                 return false;
             }
         }
