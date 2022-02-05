@@ -36,12 +36,20 @@ public class Dictionary {
         }
     }
 
+    public static Dictionary defaultWordleDictionary() {
+        return parseFromDefaultLocation().uppercase().filterTo(new WordleFilter());
+    }
+
     public Dictionary filterTo(Predicate<String> predicate) {
         return new Dictionary(ImmutableSet.copyOf(words.stream().filter(predicate).collect(Collectors.toSet())));
     }
 
     public Dictionary uppercase() {
         return new Dictionary(ImmutableSet.copyOf(words.stream().map(String::toUpperCase).collect(Collectors.toSet())));
+    }
+
+    public Dictionary filterToValid(KnownState known) {
+        return new Dictionary(ImmutableSet.copyOf(words.stream().filter(known::satisfies).collect(Collectors.toSet())));
     }
 
     public int size() {
@@ -65,6 +73,10 @@ public class Dictionary {
             }
         }
         return map;
+    }
+
+    public ImmutableSet<String> getWords() {
+        return this.words;
     }
 
     @Override
