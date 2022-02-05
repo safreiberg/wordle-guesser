@@ -7,5 +7,9 @@ plugins {
 }
 
 dependencies {
-    api project(':list')
+    implementation group: 'commons-io', name: 'commons-io', version: '2.11.0'
+    implementation group: 'com.google.guava', name: 'guava', version: '31.0.1-jre'
+    implementation group: 'com.github.ben-manes.caffeine', name: 'caffeine', version: '3.0.5'
+
+    testImplementation group: 'org.assertj', name: 'assertj-core', version: '3.22.0'
 }
