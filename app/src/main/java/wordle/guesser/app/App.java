@@ -45,7 +45,7 @@ public class App {
         while (true) {
             guessScorer.process(dict, knownState);
             System.out.println("Current dictionary size: " + dict.filterToValid(knownState).size());
-            System.out.println("The current best guesses are: " + guessScorer);
+            System.out.println("The current best guesses are: " + guessScorer.printState());
             System.out.println("Our next guess is: " + guessScorer.getBestGuess());
             String currentGuess = guessScorer.getBestGuess();
             if (currentGuess == null) {
@@ -69,7 +69,7 @@ public class App {
         while (true) {
             guessScorer.process(dict, knownState);
             System.out.println("Current dictionary size: " + dict.filterToValid(knownState).size());
-            System.out.println("The current best guesses are: " + guessScorer);
+            System.out.println("The current best guesses are: " + guessScorer.printState());
             System.out.println("Your next guess is: " + guessScorer.getBestGuess());
             String currentGuess = guessScorer.getBestGuess();
             n++;

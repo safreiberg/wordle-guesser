@@ -38,6 +38,10 @@ public class GuessScorer {
         return Iterables.getFirst(scoreToGuesses.get(scoreToGuesses.lastKey()), null);
     }
 
+    public String printState() {
+        return scoreToGuesses.toString();
+    }
+
     @Override
     public String toString() {
         return "GuessScorer{" +
