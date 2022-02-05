@@ -26,9 +26,17 @@ public class GuessScorer {
         this.rawDictionary = rawDictionary;
     }
 
+    public void determineFirstWords(Dictionary dictionary) {
+        process(dictionary, new KnownState(), true);
+    }
+
     public void process(Dictionary dictionary, KnownState state) {
+        process(dictionary, state, false);
+    }
+
+    public void process(Dictionary dictionary, KnownState state, boolean force) {
         this.scoreToGuesses.clear();
-        if (state.isEmpty()) {
+        if (state.isEmpty() && !force) {
             // hacks
             return;
         }

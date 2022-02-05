@@ -45,7 +45,11 @@ public class App {
         int n = 0;
         while (true) {
             guessScorer.process(dict, knownState);
-            System.out.println("Current dictionary size: " + dict.filterToValid(knownState).size());
+            Dictionary remaining = dict.filterToValid(knownState);
+            System.out.println("Current dictionary size: " + remaining.size());
+            if (remaining.size() < 100) {
+                System.out.println("Remaining words: " + Ordering.natural().sortedCopy(remaining.getWords()));
+            }
             System.out.println("The current best guesses are: " + guessScorer.printState());
             System.out.println("Our next guess is: " + guessScorer.getBestGuess());
             String currentGuess = guessScorer.getBestGuess();
