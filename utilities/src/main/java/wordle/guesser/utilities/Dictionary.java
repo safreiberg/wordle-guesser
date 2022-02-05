@@ -37,7 +37,7 @@ public class Dictionary {
     }
 
     public static Dictionary defaultWordleDictionary() {
-        return parseFromDefaultLocation().uppercase().filterTo(new WordleFilter());
+        return parseFromDefaultLocation().filterTo(new WordleFilter()).uppercase();
     }
 
     public Dictionary filterTo(Predicate<String> predicate) {

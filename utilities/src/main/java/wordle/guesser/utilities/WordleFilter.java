@@ -5,7 +5,7 @@ import java.util.regex.Pattern;
 
 public class WordleFilter implements Predicate<String> {
 
-    private static final Pattern AZ_PATTERN = Pattern.compile("[A-Za-z]*");
+    private static final Pattern AZ_PATTERN = Pattern.compile("[a-z]*");
 
     @Override
     public boolean test(String s) {
