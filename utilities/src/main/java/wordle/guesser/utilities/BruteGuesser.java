@@ -1,5 +1,6 @@
 package wordle.guesser.utilities;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterables;
 
 import javax.annotation.Nullable;
@@ -7,6 +8,7 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * In the remaining dictionary, we know the frequency of each letter.
@@ -15,7 +17,7 @@ import java.util.concurrent.Future;
 public class BruteGuesser implements Guesser {
 
     // Scientifically chosen
-    private static final String BEST_FIRST_WORD = "TARES";
+    private static final String BEST_FIRST_WORD = "LARES";
     private final SortedMap<Integer, Set<String>> scoreToGuesses;
     private final int guessesToKeep;
     private final Dictionary rawDictionary;
@@ -46,12 +48,20 @@ public class BruteGuesser implements Guesser {
         ExecutorService exec = Executors.newFixedThreadPool(24);
         Map<String, Future<Integer>> futureScores = new HashMap<>();
         for (String guess : rawDictionary.getWords()) {
-            futureScores.put(guess, exec.submit(() -> scoreBetter(state, prefilteredDictionary, guess)));
+            futureScores.put(guess, exec.submit(() -> {
+                return scoreBetter(state, prefilteredDictionary, guess);
+            }));
         }
         exec.shutdown();
+        int done = 0;
+        Stopwatch timer = Stopwatch.createStarted();
         for (Map.Entry<String, Future<Integer>> entry : futureScores.entrySet()) {
             try {
                 Integer score = entry.getValue().get();
+                done++;
+                if (done % 100 == 0 && timer.elapsed(TimeUnit.SECONDS) > 20) {
+                    System.out.println("Completed " + done + " in " + timer.elapsed());
+                }
                 String guess = entry.getKey();
                 scoreToGuesses.putIfAbsent(score, new HashSet<>());
                 scoreToGuesses.get(score).add(guess);
@@ -69,7 +79,10 @@ public class BruteGuesser implements Guesser {
         for (String potentialAnswer : prefilteredDictionary.getWords()) {
             KnownState copyState = state.deepCopy();
             copyState.addGuess(guess, KnownState.getOutcomes(potentialAnswer, guess));
-            aggregateScore += prefilteredDictionary.sizeAfterFiltering(copyState);
+            aggregateScore += prefilteredDictionary.sizeAfterFilteringIgnoringGuesses(copyState);
+            if (prefilteredDictionary.contains(guess)) {
+                aggregateScore -= 1;
+            }
         }
         return aggregateScore;
     }

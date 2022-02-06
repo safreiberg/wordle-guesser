@@ -10,7 +10,7 @@ import java.util.List;
 public class DebugTotals {
 
     public static void main(String[] args) {
-        Dictionary dict = Dictionary.defaultWordleDictionary();
+        Dictionary dict = Dictionary.wordle12k();
         Multimap<Integer, String> scoreToWords = HashMultimap.create();
         int i = 0;
         for (String word : dict.getWords()) {
@@ -42,7 +42,7 @@ public class DebugTotals {
     private static int playOnce(String answer, Dictionary dict) {
         int n = 0;
         KnownState knownState = new KnownState();
-        Guesser guessScorer = new SimpleGuesser(5);
+        Guesser guessScorer = new BruteGuesser(5, dict);
         while (true) {
             guessScorer.process(dict, knownState);
             String currentGuess = guessScorer.getBestGuess();

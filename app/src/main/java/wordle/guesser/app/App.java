@@ -4,11 +4,9 @@
 package wordle.guesser.app;
 
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.Ordering;
-import wordle.guesser.utilities.Dictionary;
-import wordle.guesser.utilities.BruteGuesser;
-import wordle.guesser.utilities.Guesser;
-import wordle.guesser.utilities.KnownState;
+import wordle.guesser.utilities.*;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -18,8 +16,9 @@ import java.util.Arrays;
 public class App {
     public static void main(String[] args) throws IOException {
         KnownState knownState = new KnownState();
-        Dictionary dict = Dictionary.defaultWordleDictionary();
+        Dictionary dict = Dictionary.wordle12k();
         Guesser guessScorer = new BruteGuesser(5, dict);
+//        Guesser guessScorer = new SimpleGuesser(5);
 
         System.out.println("Welcome to wordleguesser!");
         System.out.println("The app will present you with a guess.");
@@ -33,7 +32,9 @@ public class App {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))) {
             String firstEnter = reader.readLine().trim();
             if (firstEnter.contains("DEBUG ")) {
+                Stopwatch timer = Stopwatch.createStarted();
                 secretDebugMode(knownState, guessScorer, dict, firstEnter);
+                System.out.println("Elapsed: " + timer.elapsed());
             } else {
                 playGame(knownState, guessScorer, dict, reader);
             }
@@ -48,6 +49,7 @@ public class App {
             guessScorer.process(dict, knownState);
             Dictionary remaining = dict.filterToValid(knownState);
             System.out.println("Current dictionary size: " + remaining.size());
+            System.out.println("What we know is: " + knownState);
             if (remaining.size() < 100) {
                 System.out.println("Remaining words: " + Ordering.natural().sortedCopy(remaining.getWords()));
             }
@@ -64,7 +66,11 @@ public class App {
             knownState.addGuess(currentGuess, lastGuess);
             System.out.println("");
             if (currentGuess.equals(debugAnswer)) {
-                System.out.println("I win! Took me " + n + " tries.");
+                if (n <= 6) {
+                    System.out.println("I win! Took me " + n + " tries.");
+                } else {
+                    System.out.println("I lost! Took me " + n + " tries. You built me :( ...");
+                }
                 return;
             }
         }
@@ -76,6 +82,7 @@ public class App {
             guessScorer.process(dict, knownState);
             Dictionary remaining = dict.filterToValid(knownState);
             System.out.println("Current dictionary size: " + remaining.size());
+            System.out.println("What we know is: " + knownState);
             if (remaining.size() < 100) {
                 System.out.println("Remaining words: " + Ordering.natural().sortedCopy(remaining.getWords()));
             }

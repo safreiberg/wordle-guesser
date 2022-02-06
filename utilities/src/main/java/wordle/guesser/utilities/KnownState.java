@@ -40,13 +40,13 @@ public class KnownState {
         CORRECT;
     }
 
-    public void addGuess(String guess, Outcome...outcomes) {
+    public void addGuess(String guess, Outcome... outcomes) {
         if (outcomes.length != guess.length()) {
             throw new IllegalArgumentException("gimme more");
         }
         for (int i = 0; i < guess.length(); i++) {
             char character = guess.charAt(i);
-            switch(outcomes[i]) {
+            switch (outcomes[i]) {
                 case CORRECT:
                     this.requiredLocations.put(i, character);
                     break;
@@ -66,6 +66,10 @@ public class KnownState {
         if (alreadyGuessedWords.contains(word)) {
             return false;
         }
+        return satisfiesIgnoreGuessed(word);
+    }
+
+    public boolean satisfiesIgnoreGuessed(String word) {
         char[] chars = word.toCharArray();
         for (int i = 0; i < chars.length; i++) {
             Character character = chars[i];
@@ -115,5 +119,30 @@ public class KnownState {
             }
         }
         return outcomes;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        KnownState that = (KnownState) o;
+        return Objects.equals(requiredLetterWrongSpot, that.requiredLetterWrongSpot) &&
+                Objects.equals(requiredLocations, that.requiredLocations) &&
+                Objects.equals(notInWord, that.notInWord);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(requiredLetterWrongSpot, requiredLocations, notInWord);
+    }
+
+    @Override
+    public String toString() {
+        return "KnownState{" +
+                "requiredLetterWrongSpot=" + requiredLetterWrongSpot +
+                ", requiredLocations=" + requiredLocations +
+                ", notInWord=" + notInWord +
+                ", alreadyGuessedWords=" + alreadyGuessedWords +
+                '}';
     }
 }

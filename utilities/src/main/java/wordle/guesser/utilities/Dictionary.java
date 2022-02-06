@@ -8,6 +8,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -15,9 +17,11 @@ import java.util.stream.Collectors;
 public class Dictionary {
 
     private static final String DICTIONARY_LOCATION = "/usr/share/dict/american-english";
+    private static final String WORDLE_DICTIONARY_LOCATION = "/home/safreiberg/code/wordle-guesser/total-words.txt";
     private final ImmutableSet<String> words;
 
     private final Supplier<Map<Character, Integer>> LETTER_COUNT_CACHE = Suppliers.memoize(this::aggregateLetterCountInternal);
+    private final ConcurrentMap<KnownState, Integer> FILTERED_SIZE_CACHE = new ConcurrentHashMap<>();
 
     private Dictionary(ImmutableSet<String> words) {
         this.words = words;
@@ -28,15 +32,23 @@ public class Dictionary {
     }
 
     public static Dictionary parseFromDefaultLocation() {
+        return parseFrom(DICTIONARY_LOCATION);
+    }
+
+    private static Dictionary parseFrom(String file) {
         try {
-            List<String> lines = FileUtils.readLines(new File(DICTIONARY_LOCATION), StandardCharsets.UTF_8);
+            List<String> lines = FileUtils.readLines(new File(file), StandardCharsets.UTF_8);
             return new Dictionary(ImmutableSet.copyOf(lines.stream().map(String::intern).collect(Collectors.toSet())));
         } catch (IOException e) {
             throw new RuntimeException("unable to load from dictionary", e);
         }
     }
 
-    public static Dictionary defaultWordleDictionary() {
+    public static Dictionary wordle12k() {
+        return parseFrom(WORDLE_DICTIONARY_LOCATION).uppercase();
+    }
+
+    public static Dictionary linuxDictionary() {
         return parseFromDefaultLocation().filterTo(new WordleFilter()).uppercase();
     }
 
@@ -52,8 +64,19 @@ public class Dictionary {
         return new Dictionary(ImmutableSet.copyOf(words.stream().filter(known::satisfies).collect(Collectors.toSet())));
     }
 
-    public int sizeAfterFiltering(KnownState known) {
-        return (int) words.stream().filter(known::satisfies).count();
+    public int sizeAfterFilteringIgnoringGuesses(KnownState known) {
+        Integer cached = FILTERED_SIZE_CACHE.get(known);
+        if (cached != null) {
+            return cached;
+        } else {
+            int size = (int) words.stream().filter(known::satisfiesIgnoreGuessed).count();
+            Integer existing = FILTERED_SIZE_CACHE.put(known, size);
+            if (existing != null && existing != size) {
+                System.out.println("Existing " + existing + ", size " + size + ", state " + known);
+                throw new RuntimeException("weird");
+            }
+            return size;
+        }
     }
 
     public int size() {

@@ -44,7 +44,7 @@ public class DictionaryTest {
 
     @Test
     public void testThings() {
-        Dictionary dict = Dictionary.defaultWordleDictionary();
+        Dictionary dict = Dictionary.wordle12k();
 
         KnownState knownState = new KnownState();
         BruteGuesser guessScorer = new BruteGuesser(5, dict);

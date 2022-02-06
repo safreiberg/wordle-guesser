@@ -6,7 +6,7 @@ import wordle.guesser.utilities.BruteGuesser;
 public class DetermineFirstWord {
 
     public static void main(String[] args) {
-        Dictionary dict = Dictionary.defaultWordleDictionary();
+        Dictionary dict = Dictionary.wordle12k();
         BruteGuesser guessScorer = new BruteGuesser(5, dict);
         guessScorer.determineFirstWords(dict);
         System.out.println(guessScorer.getBestGuess());
