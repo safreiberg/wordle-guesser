@@ -72,7 +72,6 @@ public class Dictionary {
             int size = (int) words.stream().filter(known::satisfiesIgnoreGuessed).count();
             Integer existing = FILTERED_SIZE_CACHE.put(known, size);
             if (existing != null && existing != size) {
-                System.out.println("Existing " + existing + ", size " + size + ", state " + known);
                 throw new RuntimeException("weird");
             }
             return size;
