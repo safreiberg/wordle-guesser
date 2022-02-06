@@ -6,7 +6,8 @@ package wordle.guesser.app;
 
 import com.google.common.collect.Ordering;
 import wordle.guesser.utilities.Dictionary;
-import wordle.guesser.utilities.GuessScorer;
+import wordle.guesser.utilities.BruteGuesser;
+import wordle.guesser.utilities.Guesser;
 import wordle.guesser.utilities.KnownState;
 
 import java.io.BufferedReader;
@@ -18,7 +19,7 @@ public class App {
     public static void main(String[] args) throws IOException {
         KnownState knownState = new KnownState();
         Dictionary dict = Dictionary.defaultWordleDictionary();
-        GuessScorer guessScorer = new GuessScorer(5, dict);
+        Guesser guessScorer = new BruteGuesser(5, dict);
 
         System.out.println("Welcome to wordleguesser!");
         System.out.println("The app will present you with a guess.");
@@ -39,7 +40,7 @@ public class App {
         }
     }
 
-    private static void secretDebugMode(KnownState knownState, GuessScorer guessScorer, Dictionary dict, String firstEnter) {
+    private static void secretDebugMode(KnownState knownState, Guesser guessScorer, Dictionary dict, String firstEnter) {
         String debugAnswer = firstEnter.split(" ")[1];
         System.out.println("Entering secret debug mode. Will play without you muahaha");
         int n = 0;
@@ -69,7 +70,7 @@ public class App {
         }
     }
 
-    private static void playGame(KnownState knownState, GuessScorer guessScorer, Dictionary dict, BufferedReader reader) throws IOException {
+    private static void playGame(KnownState knownState, Guesser guessScorer, Dictionary dict, BufferedReader reader) throws IOException {
         int n = 0;
         while (true) {
             guessScorer.process(dict, knownState);

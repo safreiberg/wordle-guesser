@@ -3,7 +3,7 @@ package wordle.guesser.test;
 import com.google.common.collect.ImmutableSet;
 import org.junit.jupiter.api.Test;
 import wordle.guesser.utilities.Dictionary;
-import wordle.guesser.utilities.GuessScorer;
+import wordle.guesser.utilities.BruteGuesser;
 import wordle.guesser.utilities.KnownState;
 import wordle.guesser.utilities.WordleFilter;
 
@@ -47,7 +47,7 @@ public class DictionaryTest {
         Dictionary dict = Dictionary.defaultWordleDictionary();
 
         KnownState knownState = new KnownState();
-        GuessScorer guessScorer = new GuessScorer(5, dict);
+        BruteGuesser guessScorer = new BruteGuesser(5, dict);
         guessScorer.process(dict, knownState);
         System.out.println(guessScorer);
         System.out.println(guessScorer.getBestGuess());

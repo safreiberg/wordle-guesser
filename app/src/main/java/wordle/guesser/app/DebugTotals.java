@@ -3,13 +3,9 @@ package wordle.guesser.app;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
-import wordle.guesser.utilities.Dictionary;
-import wordle.guesser.utilities.GuessScorer;
-import wordle.guesser.utilities.KnownState;
+import wordle.guesser.utilities.*;
 
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class DebugTotals {
 
@@ -46,7 +42,7 @@ public class DebugTotals {
     private static int playOnce(String answer, Dictionary dict) {
         int n = 0;
         KnownState knownState = new KnownState();
-        GuessScorer guessScorer = new GuessScorer(5, dict);
+        Guesser guessScorer = new SimpleGuesser(5);
         while (true) {
             guessScorer.process(dict, knownState);
             String currentGuess = guessScorer.getBestGuess();
