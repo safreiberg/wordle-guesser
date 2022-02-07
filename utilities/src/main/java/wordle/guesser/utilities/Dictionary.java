@@ -16,6 +16,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -168,10 +170,20 @@ public class Dictionary {
         return filtered.stream();
     }
 
+    private static final ConcurrentMap<Set<String>, Dictionary> DICT_CACHE = new ConcurrentHashMap<>();
+
     public Dictionary filterToValid(KnownState known) {
         return new Dictionary(prefilterWordsIgnoringWrongSpot(known)
                 .filter(known::satisfies)
                 .collect(ImmutableSet.toImmutableSet()));
+//        Dictionary cached = DICT_CACHE.get(words);
+//        if (cached != null) {
+//            return cached;
+//        } else {
+//            Dictionary uncached = new Dictionary(words);
+//            DICT_CACHE.put(words, uncached);
+//            return uncached;
+//        }
     }
 
     public int sizeAfterFilteringIgnoringGuesses(KnownState known) {

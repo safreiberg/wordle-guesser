@@ -17,6 +17,7 @@ public class BruteGuesser implements Guesser {
     @VisibleForTesting
     public static boolean DEBUG_FORCE_SINGLE_THREAD = false;
     // Scientifically chosen
+    private static final String BEST_FIRST_GUESS = "LARES";
     private final SortedMap<Integer, Set<String>> scoreToGuesses;
     private final int guessesToKeep;
     private final Dictionary rawDictionary;
@@ -39,6 +40,9 @@ public class BruteGuesser implements Guesser {
 
     private void process(Dictionary dictionary, KnownState state, boolean force) {
         this.scoreToGuesses.clear();
+        if (state.isEmpty() && !force) {
+            return;
+        }
         Dictionary prefilteredDictionary = dictionary.filterToValid(state);
         int threadCount = DEBUG_FORCE_SINGLE_THREAD ? 1 : Runtime.getRuntime().availableProcessors();
         ExecutorService exec = Executors.newFixedThreadPool(threadCount);
@@ -89,6 +93,9 @@ public class BruteGuesser implements Guesser {
     @Override
     @Nullable
     public String getBestGuess() {
+        if (scoreToGuesses.isEmpty()) {
+            return BEST_FIRST_GUESS;
+        }
         return Iterables.getFirst(scoreToGuesses.get(scoreToGuesses.firstKey()), null);
     }
 
