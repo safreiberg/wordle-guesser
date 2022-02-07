@@ -1,6 +1,7 @@
 package wordle.guesser.utilities;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
@@ -114,16 +115,28 @@ public class Dictionary {
     @VisibleForTesting
     public Stream<String> prefilterWordsIgnoringWrongSpot(KnownState known) {
         Set<String> filtered = words;
-        for (Character required : known.required()) {
-            ImmutableSet<String> words = wordsWithoutCharacter.get(required);
-            if (words != null) {
-                filtered = Sets.difference(filtered, words);
+        Set<Character> requiredChars = known.required();
+        if (!requiredChars.isEmpty()) {
+            int idx = 0;
+            for (Character required : requiredChars) {
+                idx++;
+                ImmutableSet<String> withReqChar = Preconditions.checkNotNull(wordsWithCharacter.get(required));
+                if (idx == 1) {
+                    filtered = withReqChar;
+                } else {
+                    filtered = Sets.intersection(filtered, withReqChar);
+                }
             }
         }
-        for (Character disallowed : known.disallowed()) {
-            ImmutableSet<String> words = wordsWithCharacter.get(disallowed);
-            if (words != null) {
-                filtered = Sets.difference(filtered, words);
+        Set<Character> disallowedChars = known.disallowed();
+        for (Character disallowed : disallowedChars) {
+            ImmutableSet<String> missingChar = wordsWithoutCharacter.get(disallowed);
+            if (missingChar != null) {
+                if (filtered == words) {
+                    filtered = missingChar;
+                } else {
+                    filtered = Sets.intersection(filtered, missingChar);
+                }
             }
         }
         return filtered.stream();

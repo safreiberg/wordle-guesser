@@ -42,7 +42,7 @@ public class DictionaryTest {
         BruteGuesser.DEBUG_FORCE_SINGLE_THREAD = false;
         Dictionary dictionary = Dictionary.wordle12k();
         KnownState knownState = new KnownState();
-        String answer = "FUZZY";
+        String answer = "FAZES";
         BruteGuesser guesser = new BruteGuesser(5, dictionary);
 
         boolean done = false;
