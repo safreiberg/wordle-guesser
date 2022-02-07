@@ -2,7 +2,6 @@ package wordle.guesser.utilities;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Stopwatch;
 import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -11,6 +10,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.commons.io.FileUtils;
+import org.immutables.value.Value;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,18 +37,28 @@ public class Dictionary {
                 @Override
                 public Integer load(KnownState known) {
                     return (int) prefilterWordsIgnoringWrongSpot(known)
-                            .filter(known::satisfiesIgnoreGuessed)
+                            .filter(known::satisfiesOnlyKnownLocs)
                             .count();
                 }
             });
     private final ImmutableSet<String> words;
     private final ImmutableMap<Character, ImmutableSet<String>> wordsWithCharacter;
     private final ImmutableMap<Character, ImmutableSet<String>> wordsWithoutCharacter;
+    private final ImmutableMap<CharacterAndLocation, ImmutableSet<String>> wordsWithSpecificLocationChars;
+
+    @Value.Immutable
+    interface CharacterAndLocation {
+        @Value.Parameter
+        Character getCharacter();
+        @Value.Parameter
+        Integer getLocation();
+    }
 
     private Dictionary(ImmutableSet<String> words) {
         this.words = words;
         Map<Character, ImmutableSet.Builder<String>> withCharacterMapBuilder = new HashMap<>();
         Map<Character, ImmutableSet.Builder<String>> withoutCharacterMapBuilder = new HashMap<>();
+        Map<CharacterAndLocation, ImmutableSet.Builder<String>> specificLocBldr = new HashMap<>();
         for (String word : words) {
             Set<Character> seen = new HashSet<>();
             for (int i = 0; i < word.length(); i++) {
@@ -56,6 +66,10 @@ public class Dictionary {
                 seen.add(c);
                 withCharacterMapBuilder.putIfAbsent(c, ImmutableSet.builder());
                 withCharacterMapBuilder.get(c).add(word);
+
+                CharacterAndLocation charLoc = ImmutableCharacterAndLocation.of(c, i);
+                specificLocBldr.putIfAbsent(charLoc, ImmutableSet.builder());
+                specificLocBldr.get(charLoc).add(word);
             }
             for (Character unseen : Sets.difference(ALPHABET, seen)) {
                 withoutCharacterMapBuilder.putIfAbsent(unseen, ImmutableSet.builder());
@@ -73,6 +87,12 @@ public class Dictionary {
             withoutChar.put(entry.getKey(), entry.getValue().build());
         }
         wordsWithoutCharacter = withoutChar.build();
+
+        ImmutableMap.Builder<CharacterAndLocation, ImmutableSet<String>> charLoc = ImmutableMap.builder();
+        for (Map.Entry<CharacterAndLocation, ImmutableSet.Builder<String>> entry : specificLocBldr.entrySet()) {
+            charLoc.put(entry.getKey(), entry.getValue().build());
+        }
+        wordsWithSpecificLocationChars = charLoc.build();
     }
 
     public static Dictionary ofWords(Collection<String> words) {
@@ -115,17 +135,23 @@ public class Dictionary {
     @VisibleForTesting
     public Stream<String> prefilterWordsIgnoringWrongSpot(KnownState known) {
         Set<String> filtered = words;
-        Set<Character> requiredChars = known.required();
-        if (!requiredChars.isEmpty()) {
-            int idx = 0;
-            for (Character required : requiredChars) {
-                idx++;
-                ImmutableSet<String> withReqChar = Preconditions.checkNotNull(wordsWithCharacter.get(required));
-                if (idx == 1) {
-                    filtered = withReqChar;
-                } else {
-                    filtered = Sets.intersection(filtered, withReqChar);
-                }
+        Map<Integer, Character> requiredLocations = known.requiredLocations();
+        for (Map.Entry<Integer, Character> entry : requiredLocations.entrySet()) {
+            Set<String> withLoc = Preconditions.checkNotNull(wordsWithSpecificLocationChars.get(
+                    ImmutableCharacterAndLocation.of(entry.getValue(), entry.getKey())));
+            if (filtered == words) {
+                filtered = withLoc;
+            } else {
+                filtered = Sets.intersection(filtered, withLoc);
+            }
+        }
+        Set<Character> requiredChars = known.requiredUnknown();
+        for (Character required : requiredChars) {
+            ImmutableSet<String> withReqChar = Preconditions.checkNotNull(wordsWithCharacter.get(required));
+            if (filtered == words) {
+                filtered = withReqChar;
+            } else {
+                filtered = Sets.intersection(filtered, withReqChar);
             }
         }
         Set<Character> disallowedChars = known.disallowed();

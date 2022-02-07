@@ -40,7 +40,9 @@ public class DictionaryTest {
     @Test
     public void testETE() {
         BruteGuesser.DEBUG_FORCE_SINGLE_THREAD = false;
+        Stopwatch started = Stopwatch.createStarted();
         Dictionary dictionary = Dictionary.wordle12k();
+        System.out.println("Parse time: " + started.elapsed());
         KnownState knownState = new KnownState();
         String answer = "FAZES";
         BruteGuesser guesser = new BruteGuesser(5, dictionary);
@@ -50,6 +52,7 @@ public class DictionaryTest {
             dictionary = dictionary.filterToValid(knownState);
             done = guessAndUpdateState(dictionary, knownState, guesser, answer);
         }
+        System.out.println("Total time " + started.elapsed());
     }
 
     private boolean guessAndUpdateState(Dictionary dictionary, KnownState state, Guesser guesser, String answer) {

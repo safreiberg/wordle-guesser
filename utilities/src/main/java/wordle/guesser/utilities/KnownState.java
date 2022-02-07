@@ -34,14 +34,16 @@ public class KnownState {
         return copy;
     }
 
-    public Set<Character> required() {
-        return ImmutableSet.copyOf(Sets.union(
-                ImmutableSet.copyOf(requiredLocations.values()),
-                requiredLetterWrongSpot.keySet()));
+    public Set<Character> requiredUnknown() {
+        return requiredLetterWrongSpot.keySet();
+    }
+
+    public Map<Integer, Character> requiredLocations() {
+        return requiredLocations;
     }
 
     public Set<Character> disallowed() {
-        return ImmutableSet.copyOf(notInWord);
+        return notInWord;
     }
 
     public enum Outcome {
@@ -80,6 +82,17 @@ public class KnownState {
             return false;
         }
         return satisfiesIgnoreGuessed(word);
+    }
+
+    public boolean satisfiesOnlyKnownLocs(String word) {
+        char[] chars = word.toCharArray();
+        for (int i = 0; i < chars.length; i++) {
+            Character character = chars[i];
+            if (requiredLetterWrongSpot.containsKey(character) && requiredLetterWrongSpot.get(character).contains(i)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public boolean satisfiesIgnoreGuessed(String word) {
