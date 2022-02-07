@@ -1,13 +1,13 @@
 package wordle.guesser.test;
 
+import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSet;
 import org.junit.jupiter.api.Test;
-import wordle.guesser.utilities.Dictionary;
-import wordle.guesser.utilities.BruteGuesser;
-import wordle.guesser.utilities.KnownState;
-import wordle.guesser.utilities.WordleFilter;
+import wordle.guesser.utilities.*;
 
 import java.util.Arrays;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static wordle.guesser.utilities.KnownState.Outcome.*;
@@ -22,6 +22,46 @@ public class DictionaryTest {
         assertThat(dictionary.size()).isEqualTo(1);
         assertThat(dictionary.contains("ARISE")).isTrue();
         assertThat(dictionary.aggregateLetterCount().get('A')).isEqualTo(1);
+    }
+
+    @Test
+    public void testDictionaryPrefilter() {
+        Dictionary dictionary = Dictionary.ofWords(ImmutableSet.of("ALOFT", "ARISE", "FATLI"));
+        KnownState knownState = new KnownState();
+        knownState.addGuess("ART", CORRECT, NOT_IN_WORD, WRONG_SPOT);
+        assertThat(dictionary.prefilterWordsIgnoringWrongSpot(knownState).collect(Collectors.toSet())).isEqualTo(ImmutableSet.of("ALOFT", "FATLI"));
+        // filterToValid considers wrongspot. Prefilter doesn't
+        dictionary = dictionary.filterToValid(knownState);
+        assertThat(dictionary.getWords()).isEqualTo(ImmutableSet.of("ALOFT"));
+        knownState.addGuess("O", NOT_IN_WORD);
+        assertThat(dictionary.prefilterWordsIgnoringWrongSpot(knownState).collect(Collectors.toSet())).isEqualTo(ImmutableSet.of());
+    }
+
+    @Test
+    public void testETE() {
+        BruteGuesser.DEBUG_FORCE_SINGLE_THREAD = false;
+        Dictionary dictionary = Dictionary.wordle12k();
+        KnownState knownState = new KnownState();
+        String answer = "SKILL";
+        BruteGuesser guesser = new BruteGuesser(5, dictionary);
+
+        guessAndUpdateState(dictionary, knownState, guesser, answer);
+
+        dictionary = dictionary.filterToValid(knownState);
+        guessAndUpdateState(dictionary, knownState, guesser, answer);
+        dictionary = dictionary.filterToValid(knownState);
+        guessAndUpdateState(dictionary, knownState, guesser, answer);
+        dictionary = dictionary.filterToValid(knownState);
+        guessAndUpdateState(dictionary, knownState, guesser, answer);
+    }
+
+    private void guessAndUpdateState(Dictionary dictionary, KnownState state, Guesser guesser, String answer) {
+        guesser.process(dictionary, state);
+        String guess = Preconditions.checkNotNull(guesser.getBestGuess());
+        System.out.println(guess);
+        KnownState.Outcome[] outcomes = KnownState.getOutcomes(answer, guess);
+        state.addGuess(guess, outcomes);
+        System.out.println(dictionary.prefilterWordsIgnoringWrongSpot(state).count());
     }
 
     @Test
@@ -43,9 +83,15 @@ public class DictionaryTest {
     }
 
     @Test
+    public void timeDictionaryConstruction() {
+        Stopwatch started = Stopwatch.createStarted();
+        Dictionary dict = Dictionary.wordle12k();
+        System.out.println("Construction takes " + started.elapsed());
+    }
+
+    @Test
     public void testThings() {
         Dictionary dict = Dictionary.wordle12k();
-
         KnownState knownState = new KnownState();
         BruteGuesser guessScorer = new BruteGuesser(5, dict);
         guessScorer.process(dict, knownState);

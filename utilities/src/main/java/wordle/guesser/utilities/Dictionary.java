@@ -1,30 +1,76 @@
 package wordle.guesser.utilities;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Stopwatch;
 import com.google.common.base.Suppliers;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class Dictionary {
 
     private static final String DICTIONARY_LOCATION = "/usr/share/dict/american-english";
     private static final String WORDLE_DICTIONARY_LOCATION = "/home/safreiberg/code/wordle-guesser/total-words.txt";
+    private static final ImmutableSet<Character> ALPHABET = ImmutableSet.of('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+            'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z');
+    private final Supplier<Map<Character, Integer>> letterCountCache =
+            Suppliers.memoize(this::aggregateLetterCountInternal);
+    private final LoadingCache<KnownState, Integer> filteredSizeCache = CacheBuilder.newBuilder()
+            .recordStats()
+            .initialCapacity(100_000)
+            .build(new CacheLoader<>() {
+                @Override
+                public Integer load(KnownState known) throws Exception {
+                    return (int) prefilterWordsIgnoringWrongSpot(known)
+                            .filter(known::satisfiesIgnoreGuessed)
+                            .count();
+                }
+            });
     private final ImmutableSet<String> words;
-
-    private final Supplier<Map<Character, Integer>> LETTER_COUNT_CACHE = Suppliers.memoize(this::aggregateLetterCountInternal);
-    private final ConcurrentMap<KnownState, Integer> FILTERED_SIZE_CACHE = new ConcurrentHashMap<>();
+    private final ImmutableMap<Character, ImmutableSet<String>> wordsWithCharacter;
+    private final ImmutableMap<Character, ImmutableSet<String>> wordsWithoutCharacter;
 
     private Dictionary(ImmutableSet<String> words) {
         this.words = words;
+        Map<Character, ImmutableSet.Builder<String>> withCharacterMapBuilder = new HashMap<>();
+        Map<Character, ImmutableSet.Builder<String>> withoutCharacterMapBuilder = new HashMap<>();
+        for (String word : words) {
+            Set<Character> seen = new HashSet<>();
+            for (int i = 0; i < word.length(); i++) {
+                Character c = word.charAt(i);
+                seen.add(c);
+                withCharacterMapBuilder.putIfAbsent(c, ImmutableSet.builder());
+                withCharacterMapBuilder.get(c).add(word);
+            }
+            for (Character unseen : Sets.difference(ALPHABET, seen)) {
+                withoutCharacterMapBuilder.putIfAbsent(unseen, ImmutableSet.builder());
+                withoutCharacterMapBuilder.get(unseen).add(word);
+            }
+        }
+        ImmutableMap.Builder<Character, ImmutableSet<String>> withChar = ImmutableMap.builder();
+        for (Map.Entry<Character, ImmutableSet.Builder<String>> entry : withCharacterMapBuilder.entrySet()) {
+            withChar.put(entry.getKey(), entry.getValue().build());
+        }
+        wordsWithCharacter = withChar.build();
+
+        ImmutableMap.Builder<Character, ImmutableSet<String>> withoutChar = ImmutableMap.builder();
+        for (Map.Entry<Character, ImmutableSet.Builder<String>> entry : withoutCharacterMapBuilder.entrySet()) {
+            withoutChar.put(entry.getKey(), entry.getValue().build());
+        }
+        wordsWithoutCharacter = withoutChar.build();
     }
 
     public static Dictionary ofWords(Collection<String> words) {
@@ -38,7 +84,8 @@ public class Dictionary {
     private static Dictionary parseFrom(String file) {
         try {
             List<String> lines = FileUtils.readLines(new File(file), StandardCharsets.UTF_8);
-            return new Dictionary(ImmutableSet.copyOf(lines.stream().map(String::intern).collect(Collectors.toSet())));
+            return new Dictionary(lines.stream()
+                    .collect(ImmutableSet.toImmutableSet()));
         } catch (IOException e) {
             throw new RuntimeException("unable to load from dictionary", e);
         }
@@ -57,25 +104,39 @@ public class Dictionary {
     }
 
     public Dictionary uppercase() {
-        return new Dictionary(ImmutableSet.copyOf(words.stream().map(String::toUpperCase).collect(Collectors.toSet())));
+        return new Dictionary(words.stream()
+                .map(String::toUpperCase)
+                .map(String::intern)
+                .collect(ImmutableSet.toImmutableSet()));
+    }
+
+    @VisibleForTesting
+    public Stream<String> prefilterWordsIgnoringWrongSpot(KnownState known) {
+        Stopwatch timer = Stopwatch.createStarted();
+        Stream<String> stream = words.stream();
+        for (Character required : known.required()) {
+            ImmutableSet<String> words = wordsWithoutCharacter.get(required);
+            if (words != null) {
+                stream = stream.filter(word -> !words.contains(word));
+            }
+        }
+        for (Character disallowed : known.disallowed()) {
+            ImmutableSet<String> words = wordsWithCharacter.get(disallowed);
+            if (words != null) {
+                stream = stream.filter(word -> !words.contains(word));
+            }
+        }
+        return stream;
     }
 
     public Dictionary filterToValid(KnownState known) {
-        return new Dictionary(ImmutableSet.copyOf(words.stream().filter(known::satisfies).collect(Collectors.toSet())));
+        return new Dictionary(prefilterWordsIgnoringWrongSpot(known)
+                .filter(known::satisfies)
+                .collect(ImmutableSet.toImmutableSet()));
     }
 
     public int sizeAfterFilteringIgnoringGuesses(KnownState known) {
-        Integer cached = FILTERED_SIZE_CACHE.get(known);
-        if (cached != null) {
-            return cached;
-        } else {
-            int size = (int) words.stream().filter(known::satisfiesIgnoreGuessed).count();
-            Integer existing = FILTERED_SIZE_CACHE.put(known, size);
-            if (existing != null && existing != size) {
-                throw new RuntimeException("weird");
-            }
-            return size;
-        }
+        return filteredSizeCache.getUnchecked(known);
     }
 
     public int size() {
@@ -87,7 +148,7 @@ public class Dictionary {
     }
 
     public Map<Character, Integer> aggregateLetterCount() {
-        return LETTER_COUNT_CACHE.get();
+        return letterCountCache.get();
     }
 
     private Map<Character, Integer> aggregateLetterCountInternal() {

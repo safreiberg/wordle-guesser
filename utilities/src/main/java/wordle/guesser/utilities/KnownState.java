@@ -1,5 +1,8 @@
 package wordle.guesser.utilities;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
+
 import java.util.*;
 
 public class KnownState {
@@ -29,6 +32,16 @@ public class KnownState {
             copy.requiredLetterWrongSpot.put(entry.getKey(), new HashSet<>(entry.getValue()));
         }
         return copy;
+    }
+
+    public Set<Character> required() {
+        return ImmutableSet.copyOf(Sets.union(
+                ImmutableSet.copyOf(requiredLocations.values()),
+                requiredLetterWrongSpot.keySet()));
+    }
+
+    public Set<Character> disallowed() {
+        return ImmutableSet.copyOf(notInWord);
     }
 
     public enum Outcome {

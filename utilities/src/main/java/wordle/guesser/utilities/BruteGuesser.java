@@ -1,5 +1,6 @@
 package wordle.guesser.utilities;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterables;
 
@@ -16,8 +17,9 @@ import java.util.concurrent.TimeUnit;
  */
 public class BruteGuesser implements Guesser {
 
+    @VisibleForTesting
+    public static boolean DEBUG_FORCE_SINGLE_THREAD = false;
     // Scientifically chosen
-    private static final String BEST_FIRST_WORD = "LARES";
     private final SortedMap<Integer, Set<String>> scoreToGuesses;
     private final int guessesToKeep;
     private final Dictionary rawDictionary;
@@ -40,12 +42,9 @@ public class BruteGuesser implements Guesser {
 
     private void process(Dictionary dictionary, KnownState state, boolean force) {
         this.scoreToGuesses.clear();
-        if (state.isEmpty() && !force) {
-            // hacks
-            return;
-        }
         Dictionary prefilteredDictionary = dictionary.filterToValid(state);
-        ExecutorService exec = Executors.newFixedThreadPool(24);
+        int threadCount = DEBUG_FORCE_SINGLE_THREAD ? 1 : Runtime.getRuntime().availableProcessors();
+        ExecutorService exec = Executors.newFixedThreadPool(threadCount);
         Map<String, Future<Integer>> futureScores = new HashMap<>();
         for (String guess : rawDictionary.getWords()) {
             futureScores.put(guess, exec.submit(() -> {
@@ -79,10 +78,11 @@ public class BruteGuesser implements Guesser {
         for (String potentialAnswer : prefilteredDictionary.getWords()) {
             KnownState copyState = state.deepCopy();
             copyState.addGuess(guess, KnownState.getOutcomes(potentialAnswer, guess));
-            aggregateScore += prefilteredDictionary.sizeAfterFilteringIgnoringGuesses(copyState);
+            int score = prefilteredDictionary.sizeAfterFilteringIgnoringGuesses(copyState);
             if (prefilteredDictionary.contains(guess)) {
-                aggregateScore -= 1;
+                score -= 1;
             }
+            aggregateScore += score;
         }
         return aggregateScore;
     }
@@ -90,9 +90,6 @@ public class BruteGuesser implements Guesser {
     @Override
     @Nullable
     public String getBestGuess() {
-        if (scoreToGuesses.isEmpty()) {
-            return BEST_FIRST_WORD;
-        }
         return Iterables.getFirst(scoreToGuesses.get(scoreToGuesses.firstKey()), null);
     }
 

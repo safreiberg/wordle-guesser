@@ -13,3 +13,10 @@ dependencies {
 
     testImplementation group: 'org.assertj', name: 'assertj-core', version: '3.22.0'
 }
+
+test {
+  minHeapSize = "1g" // initial heap size
+  maxHeapSize = "4g" // maximum heap size
+  jvmArgs '-XX:MaxPermSize=512m' // mem argument for the test JVM
+}
+
