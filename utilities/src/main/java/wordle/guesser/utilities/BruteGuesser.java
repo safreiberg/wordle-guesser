@@ -6,10 +6,7 @@ import com.google.common.collect.Iterables;
 
 import javax.annotation.Nullable;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * In the remaining dictionary, we know the frequency of each letter.
@@ -73,7 +70,9 @@ public class BruteGuesser implements Guesser {
         }
     }
 
-    private int scoreBetter(KnownState state, Dictionary prefilteredDictionary, String guess) {
+    private int scoreBetter(KnownState state,
+                            Dictionary prefilteredDictionary,
+                            String guess) {
         int aggregateScore = 0;
         for (String potentialAnswer : prefilteredDictionary.getWords()) {
             KnownState copyState = state.deepCopy();

@@ -31,9 +31,10 @@ public class Dictionary {
     private final LoadingCache<KnownState, Integer> filteredSizeCache = CacheBuilder.newBuilder()
             .recordStats()
             .initialCapacity(100_000)
+            .concurrencyLevel(24)
             .build(new CacheLoader<>() {
                 @Override
-                public Integer load(KnownState known) throws Exception {
+                public Integer load(KnownState known) {
                     return (int) prefilterWordsIgnoringWrongSpot(known)
                             .filter(known::satisfiesIgnoreGuessed)
                             .count();
@@ -112,21 +113,20 @@ public class Dictionary {
 
     @VisibleForTesting
     public Stream<String> prefilterWordsIgnoringWrongSpot(KnownState known) {
-        Stopwatch timer = Stopwatch.createStarted();
-        Stream<String> stream = words.stream();
+        Set<String> filtered = words;
         for (Character required : known.required()) {
             ImmutableSet<String> words = wordsWithoutCharacter.get(required);
             if (words != null) {
-                stream = stream.filter(word -> !words.contains(word));
+                filtered = Sets.difference(filtered, words);
             }
         }
         for (Character disallowed : known.disallowed()) {
             ImmutableSet<String> words = wordsWithCharacter.get(disallowed);
             if (words != null) {
-                stream = stream.filter(word -> !words.contains(word));
+                filtered = Sets.difference(filtered, words);
             }
         }
-        return stream;
+        return filtered.stream();
     }
 
     public Dictionary filterToValid(KnownState known) {

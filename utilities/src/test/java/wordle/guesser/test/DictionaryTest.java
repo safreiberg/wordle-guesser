@@ -42,26 +42,24 @@ public class DictionaryTest {
         BruteGuesser.DEBUG_FORCE_SINGLE_THREAD = false;
         Dictionary dictionary = Dictionary.wordle12k();
         KnownState knownState = new KnownState();
-        String answer = "SKILL";
+        String answer = "FUZZY";
         BruteGuesser guesser = new BruteGuesser(5, dictionary);
 
-        guessAndUpdateState(dictionary, knownState, guesser, answer);
-
-        dictionary = dictionary.filterToValid(knownState);
-        guessAndUpdateState(dictionary, knownState, guesser, answer);
-        dictionary = dictionary.filterToValid(knownState);
-        guessAndUpdateState(dictionary, knownState, guesser, answer);
-        dictionary = dictionary.filterToValid(knownState);
-        guessAndUpdateState(dictionary, knownState, guesser, answer);
+        boolean done = false;
+        while (!done) {
+            dictionary = dictionary.filterToValid(knownState);
+            done = guessAndUpdateState(dictionary, knownState, guesser, answer);
+        }
     }
 
-    private void guessAndUpdateState(Dictionary dictionary, KnownState state, Guesser guesser, String answer) {
+    private boolean guessAndUpdateState(Dictionary dictionary, KnownState state, Guesser guesser, String answer) {
         guesser.process(dictionary, state);
         String guess = Preconditions.checkNotNull(guesser.getBestGuess());
         System.out.println(guess);
         KnownState.Outcome[] outcomes = KnownState.getOutcomes(answer, guess);
         state.addGuess(guess, outcomes);
         System.out.println(dictionary.prefilterWordsIgnoringWrongSpot(state).count());
+        return answer.equals(guess);
     }
 
     @Test
