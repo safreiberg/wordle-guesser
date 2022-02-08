@@ -29,7 +29,7 @@ public class DictionaryTest {
         Dictionary dictionary = Dictionary.ofWords(ImmutableSet.of("ALOFT", "ARISE", "FATLI"));
         KnownState knownState = new KnownState();
         knownState.addGuess("ART", CORRECT, NOT_IN_WORD, WRONG_SPOT);
-        assertThat(dictionary.prefilterWordsIgnoringWrongSpot(knownState).collect(Collectors.toSet())).isEqualTo(ImmutableSet.of("ALOFT", "FATLI"));
+        assertThat(dictionary.prefilterWordsIgnoringWrongSpot(knownState).collect(Collectors.toSet())).isEqualTo(ImmutableSet.of("ALOFT"));
         // filterToValid considers wrongspot. Prefilter doesn't
         dictionary = dictionary.filterToValid(knownState);
         assertThat(dictionary.getWords()).isEqualTo(ImmutableSet.of("ALOFT"));

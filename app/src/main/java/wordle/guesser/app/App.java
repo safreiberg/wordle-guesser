@@ -18,7 +18,6 @@ public class App {
         KnownState knownState = new KnownState();
         Dictionary dict = Dictionary.wordle12k();
         Guesser guessScorer = new BruteGuesser(5, dict);
-//        Guesser guessScorer = new SimpleGuesser(5);
 
         System.out.println("Welcome to wordleguesser!");
         System.out.println("The app will present you with a guess.");

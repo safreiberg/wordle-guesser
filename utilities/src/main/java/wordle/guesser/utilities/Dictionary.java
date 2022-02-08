@@ -33,7 +33,7 @@ public class Dictionary {
             Suppliers.memoize(this::aggregateLetterCountInternal);
     private final LoadingCache<KnownState, Integer> filteredSizeCache = CacheBuilder.newBuilder()
             .recordStats()
-            .initialCapacity(100_000)
+            .initialCapacity(2_000_000)
             .concurrencyLevel(24)
             .build(new CacheLoader<>() {
                 @Override
@@ -138,9 +138,11 @@ public class Dictionary {
     public Stream<String> prefilterWordsIgnoringWrongSpot(KnownState known) {
         Set<String> filtered = words;
         Map<Integer, Character> requiredLocations = known.requiredLocations();
+        Set<Character> alreadyFiltered = new HashSet<>();
         for (Map.Entry<Integer, Character> entry : requiredLocations.entrySet()) {
             Set<String> withLoc = Preconditions.checkNotNull(wordsWithSpecificLocationChars.get(
                     ImmutableCharacterAndLocation.of(entry.getValue(), entry.getKey())));
+            alreadyFiltered.add(entry.getValue());
             if (filtered == words) {
                 filtered = withLoc;
             } else {
@@ -149,6 +151,9 @@ public class Dictionary {
         }
         Set<Character> requiredChars = known.requiredUnknown();
         for (Character required : requiredChars) {
+            if (alreadyFiltered.contains(required)) {
+                continue;
+            }
             ImmutableSet<String> withReqChar = Preconditions.checkNotNull(wordsWithCharacter.get(required));
             if (filtered == words) {
                 filtered = withReqChar;
@@ -165,25 +170,50 @@ public class Dictionary {
                 } else {
                     filtered = Sets.intersection(filtered, missingChar);
                 }
+            } else {
+                filtered = Collections.emptySet();
             }
         }
         return filtered.stream();
     }
 
-    private static final ConcurrentMap<Set<String>, Dictionary> DICT_CACHE = new ConcurrentHashMap<>();
+    private static <K> Set<K> fastIntersection(Set<K> left, Set<K> right) {
+        if (left.size() < right.size()) {
+            return intersect(left, right);
+        } else {
+            return intersect(right, left);
+        }
+    }
+
+    private static <K> Set<K> intersect(Set<K> smaller, Set<K> larger) {
+        Set<K> ret = new HashSet<>(smaller.size());
+        for (K elem : smaller) {
+            if (larger.contains(elem)) {
+                ret.add(elem);
+            }
+        }
+        return ret;
+    }
+
+    private static final ConcurrentMap<KnownState, Dictionary> CACHE = new ConcurrentHashMap<>();
 
     public Dictionary filterToValid(KnownState known) {
-        return new Dictionary(prefilterWordsIgnoringWrongSpot(known)
-                .filter(known::satisfies)
-                .collect(ImmutableSet.toImmutableSet()));
-//        Dictionary cached = DICT_CACHE.get(words);
-//        if (cached != null) {
-//            return cached;
-//        } else {
-//            Dictionary uncached = new Dictionary(words);
-//            DICT_CACHE.put(words, uncached);
-//            return uncached;
-//        }
+        if (known.guessed().isEmpty()) {
+            Dictionary dictionary = CACHE.get(known);
+            if (dictionary == null) {
+                Dictionary computed = new Dictionary(prefilterWordsIgnoringWrongSpot(known)
+                        .filter(known::satisfies)
+                        .collect(ImmutableSet.toImmutableSet()));
+                CACHE.put(known.deepCopy(), computed);
+                return computed;
+            } else {
+                return dictionary;
+            }
+        } else {
+            return new Dictionary(prefilterWordsIgnoringWrongSpot(known)
+                    .filter(known::satisfies)
+                    .collect(ImmutableSet.toImmutableSet()));
+        }
     }
 
     public int sizeAfterFilteringIgnoringGuesses(KnownState known) {

@@ -1,8 +1,5 @@
 package wordle.guesser.utilities;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
-
 import java.util.*;
 
 public class KnownState {
@@ -13,9 +10,9 @@ public class KnownState {
     private final Set<String> alreadyGuessedWords = new HashSet<>();
 
     public KnownState() {
-        this.requiredLetterWrongSpot = new HashMap<>();
-        this.requiredLocations = new HashMap<>();
-        this.notInWord = new HashSet<>();
+        this.requiredLetterWrongSpot = new HashMap<>(10);
+        this.requiredLocations = new HashMap<>(10);
+        this.notInWord = new HashSet<>(10);
     }
 
     public boolean isEmpty() {
@@ -46,6 +43,10 @@ public class KnownState {
         return notInWord;
     }
 
+    public Collection<String> guessed() {
+        return alreadyGuessedWords;
+    }
+
     public enum Outcome {
         // grey
         NOT_IN_WORD,
@@ -66,7 +67,7 @@ public class KnownState {
                     this.requiredLocations.put(i, character);
                     break;
                 case WRONG_SPOT:
-                    this.requiredLetterWrongSpot.putIfAbsent(character, new HashSet<>());
+                    this.requiredLetterWrongSpot.putIfAbsent(character, new HashSet<>(10));
                     this.requiredLetterWrongSpot.get(character).add(i);
                     break;
                 case NOT_IN_WORD:
@@ -129,19 +130,24 @@ public class KnownState {
             throw new IllegalArgumentException("mean");
         }
         Outcome[] outcomes = new Outcome[answer.length()];
-        Set<Character> charsInAnswer = new HashSet<>();
         char[] answerChars = answer.toCharArray();
-        for (int i = 0; i < answerChars.length; i++) {
-            charsInAnswer.add(answerChars[i]);
-        }
         char[] guessChars = guess.toCharArray();
         for (int i = 0; i < guessChars.length; i++) {
             if (answerChars[i] == guessChars[i]) {
                 outcomes[i] = Outcome.CORRECT;
-            } else if (charsInAnswer.contains(guessChars[i])) {
-                outcomes[i] = Outcome.WRONG_SPOT;
             } else {
-                outcomes[i] = Outcome.NOT_IN_WORD;
+                boolean seen = false;
+                for (char answerChar : answerChars) {
+                    if (answerChar == guessChars[i]) {
+                        seen = true;
+                        break;
+                    }
+                }
+                if (seen) {
+                    outcomes[i] = Outcome.WRONG_SPOT;
+                } else {
+                    outcomes[i] = Outcome.NOT_IN_WORD;
+                }
             }
         }
         return outcomes;
