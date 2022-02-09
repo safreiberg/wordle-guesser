@@ -12,7 +12,9 @@ dependencies {
     implementation project(':utilities')
 }
 
+applicationDefaultJvmArgs = ["-Xms1024m", "-Xmx8192m"]
+
 application {
     // Define the main class for the application.
-    mainClass = 'wordle.guesser.app.App'
+    mainClass = 'wordle.guesser.app.DetermineFirstWord'
 }

@@ -31,16 +31,17 @@ public class Dictionary {
             'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z');
     private final Supplier<Map<Character, Integer>> letterCountCache =
             Suppliers.memoize(this::aggregateLetterCountInternal);
-    private final LoadingCache<KnownState, Integer> filteredSizeCache = CacheBuilder.newBuilder()
+    private final LoadingCache<KnownState, Set<String>> filteredDictCache = CacheBuilder.newBuilder()
             .recordStats()
-            .initialCapacity(2_000_000)
+            .initialCapacity(10)
+            .maximumSize(100_000)
             .concurrencyLevel(24)
             .build(new CacheLoader<>() {
                 @Override
-                public Integer load(KnownState known) {
-                    return (int) prefilterWordsIgnoringWrongSpot(known)
+                public Set<String> load(KnownState known) {
+                    return prefilterWordsIgnoringWrongSpot(known)
                             .filter(known::satisfiesOnlyKnownLocs)
-                            .count();
+                            .collect(Collectors.toSet());
                 }
             });
     private final ImmutableSet<String> words;
@@ -137,12 +138,16 @@ public class Dictionary {
     @VisibleForTesting
     public Stream<String> prefilterWordsIgnoringWrongSpot(KnownState known) {
         Set<String> filtered = words;
-        Map<Integer, Character> requiredLocations = known.requiredLocations();
+        Character[] requiredLocations = known.requiredLocations();
         Set<Character> alreadyFiltered = new HashSet<>();
-        for (Map.Entry<Integer, Character> entry : requiredLocations.entrySet()) {
+        for (int i = 0; i < requiredLocations.length; i++) {
+            Character character = requiredLocations[i];
+            if (character == null) {
+                continue;
+            }
             Set<String> withLoc = Preconditions.checkNotNull(wordsWithSpecificLocationChars.get(
-                    ImmutableCharacterAndLocation.of(entry.getValue(), entry.getKey())));
-            alreadyFiltered.add(entry.getValue());
+                    ImmutableCharacterAndLocation.of(character, i)));
+            alreadyFiltered.add(character);
             if (filtered == words) {
                 filtered = withLoc;
             } else {
@@ -177,24 +182,6 @@ public class Dictionary {
         return filtered.stream();
     }
 
-    private static <K> Set<K> fastIntersection(Set<K> left, Set<K> right) {
-        if (left.size() < right.size()) {
-            return intersect(left, right);
-        } else {
-            return intersect(right, left);
-        }
-    }
-
-    private static <K> Set<K> intersect(Set<K> smaller, Set<K> larger) {
-        Set<K> ret = new HashSet<>(smaller.size());
-        for (K elem : smaller) {
-            if (larger.contains(elem)) {
-                ret.add(elem);
-            }
-        }
-        return ret;
-    }
-
     private static final ConcurrentMap<KnownState, Dictionary> CACHE = new ConcurrentHashMap<>();
 
     public Dictionary filterToValid(KnownState known) {
@@ -216,8 +203,15 @@ public class Dictionary {
         }
     }
 
-    public int sizeAfterFilteringIgnoringGuesses(KnownState known) {
-        return filteredSizeCache.getUnchecked(known);
+    public int sizeAfterFiltering(KnownState known) {
+        Set<String> unchecked = filteredDictCache.getUnchecked(known);
+        int remaining = 0;
+        for (String guess : known.guessed()) {
+            if (unchecked.contains(guess)) {
+                remaining += 1;
+            }
+        }
+        return unchecked.size() - remaining;
     }
 
     public int size() {

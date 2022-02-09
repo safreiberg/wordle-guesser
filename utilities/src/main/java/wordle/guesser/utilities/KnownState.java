@@ -5,25 +5,31 @@ import java.util.*;
 public class KnownState {
 
     private final Map<Character, Set<Integer>> requiredLetterWrongSpot;
-    private final Map<Integer, Character> requiredLocations;
+    private final Character[] requiredLocations;
     private final Set<Character> notInWord;
     private final Set<String> alreadyGuessedWords = new HashSet<>();
 
     public KnownState() {
         this.requiredLetterWrongSpot = new HashMap<>(10);
-        this.requiredLocations = new HashMap<>(10);
+        this.requiredLocations = new Character[5];
         this.notInWord = new HashSet<>(10);
     }
 
     public boolean isEmpty() {
-        return requiredLetterWrongSpot.isEmpty() && requiredLocations.isEmpty()
-                && notInWord.isEmpty() && alreadyGuessedWords.isEmpty();
+        for (Character character : requiredLocations) {
+            if (character != null) {
+                return false;
+            }
+        }
+        return requiredLetterWrongSpot.isEmpty()
+                && notInWord.isEmpty()
+                && alreadyGuessedWords.isEmpty();
     }
 
     public KnownState deepCopy() {
         KnownState copy = new KnownState();
         copy.notInWord.addAll(notInWord);
-        copy.requiredLocations.putAll(requiredLocations);
+        System.arraycopy(requiredLocations, 0, copy.requiredLocations, 0, requiredLocations.length);
         copy.alreadyGuessedWords.addAll(alreadyGuessedWords);
         for (Map.Entry<Character, Set<Integer>> entry : requiredLetterWrongSpot.entrySet()) {
             copy.requiredLetterWrongSpot.put(entry.getKey(), new HashSet<>(entry.getValue()));
@@ -35,7 +41,7 @@ public class KnownState {
         return requiredLetterWrongSpot.keySet();
     }
 
-    public Map<Integer, Character> requiredLocations() {
+    public Character[] requiredLocations() {
         return requiredLocations;
     }
 
@@ -64,7 +70,7 @@ public class KnownState {
             char character = guess.charAt(i);
             switch (outcomes[i]) {
                 case CORRECT:
-                    this.requiredLocations.put(i, character);
+                    this.requiredLocations[i] = character;
                     break;
                 case WRONG_SPOT:
                     this.requiredLetterWrongSpot.putIfAbsent(character, new HashSet<>(10));
@@ -103,7 +109,7 @@ public class KnownState {
             if (notInWord.contains(character)) {
                 return false;
             }
-            if (requiredLocations.containsKey(i) && requiredLocations.get(i) != character) {
+            if (requiredLocations[i] != null && requiredLocations[i] != character) {
                 return false;
             }
             if (requiredLetterWrongSpot.containsKey(character) && requiredLetterWrongSpot.get(character).contains(i)) {
@@ -159,20 +165,20 @@ public class KnownState {
         if (o == null || getClass() != o.getClass()) return false;
         KnownState that = (KnownState) o;
         return Objects.equals(requiredLetterWrongSpot, that.requiredLetterWrongSpot) &&
-                Objects.equals(requiredLocations, that.requiredLocations) &&
+                Arrays.equals(requiredLocations, that.requiredLocations) &&
                 Objects.equals(notInWord, that.notInWord);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(requiredLetterWrongSpot, requiredLocations, notInWord);
+        return Objects.hash(requiredLetterWrongSpot, Arrays.hashCode(requiredLocations), notInWord);
     }
 
     @Override
     public String toString() {
         return "KnownState{" +
                 "requiredLetterWrongSpot=" + requiredLetterWrongSpot +
-                ", requiredLocations=" + requiredLocations +
+                ", requiredLocations=" + Arrays.toString(requiredLocations) +
                 ", notInWord=" + notInWord +
                 ", alreadyGuessedWords=" + alreadyGuessedWords +
                 '}';

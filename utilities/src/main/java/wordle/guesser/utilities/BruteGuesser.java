@@ -82,10 +82,7 @@ public class BruteGuesser implements Guesser {
         for (String potentialAnswer : prefilteredDictionary.getWords()) {
             KnownState copyState = state.deepCopy();
             copyState.addGuess(guess, KnownState.getOutcomes(potentialAnswer, guess));
-            int score = prefilteredDictionary.sizeAfterFilteringIgnoringGuesses(copyState);
-            if (prefilteredDictionary.contains(guess)) {
-                score -= 1;
-            }
+            int score = prefilteredDictionary.sizeAfterFiltering(copyState);
             aggregateScore += score;
         }
         return aggregateScore;

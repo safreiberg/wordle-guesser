@@ -38,6 +38,26 @@ public class DictionaryTest {
     }
 
     @Test
+    public void testFrames() {
+        Dictionary dict = Dictionary.ofWords(ImmutableSet.of("FRAME", "ARAME", "GRAME", "FROGS"));
+        KnownState state = new KnownState();
+        state.addGuess("LARES", NOT_IN_WORD, WRONG_SPOT, WRONG_SPOT, WRONG_SPOT, NOT_IN_WORD);
+        state.addGuess("TRADE", NOT_IN_WORD, CORRECT, CORRECT, NOT_IN_WORD, CORRECT);
+        state.addGuess("CRUMB", NOT_IN_WORD, CORRECT, NOT_IN_WORD, CORRECT, NOT_IN_WORD);
+        BruteGuesser bruteGuesser = new BruteGuesser(5, dict);
+        bruteGuesser.process(dict, state);
+        System.out.println(state);
+        System.out.println(bruteGuesser.printState());
+        System.out.println(dict.sizeAfterFiltering(state));
+
+        KnownState copy = state.deepCopy();
+        copy.addGuess("FROGS", KnownState.getOutcomes("GRAME", "FROGS"));
+        bruteGuesser.process(dict, copy);
+        System.out.println(copy);
+        System.out.println(bruteGuesser.printState());
+    }
+
+    @Test
     public void testETE() {
         BruteGuesser.DEBUG_FORCE_SINGLE_THREAD = false;
         Stopwatch started = Stopwatch.createStarted();
