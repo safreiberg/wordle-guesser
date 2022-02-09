@@ -18,7 +18,7 @@ public class BruteGuesser implements Guesser {
     public static boolean DEBUG_FORCE_SINGLE_THREAD = false;
     public static boolean DEBUG_SKIP_HARDCODED_ANSWER = false;
     // Scientifically chosen
-    private static final String BEST_FIRST_GUESS = "LARES";
+    private static final String BEST_FIRST_GUESS = "CRAVE";
     private final SortedMap<Integer, Set<String>> scoreToGuesses;
     private final int guessesToKeep;
     private final Dictionary rawDictionary;

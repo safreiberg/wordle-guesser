@@ -34,7 +34,7 @@ public class Dictionary {
     private final LoadingCache<KnownState, Set<String>> filteredDictCache = CacheBuilder.newBuilder()
             .recordStats()
             .initialCapacity(10)
-            .maximumSize(100_000)
+            .maximumSize(250_000)
             .concurrencyLevel(24)
             .build(new CacheLoader<>() {
                 @Override
@@ -109,7 +109,9 @@ public class Dictionary {
     private static Dictionary parseFrom(String file) {
         try {
             List<String> lines = FileUtils.readLines(new File(file), StandardCharsets.UTF_8);
-            return new Dictionary(lines.stream()
+            ArrayList<String> collect = new ArrayList<>(lines);
+            Collections.shuffle(collect);
+            return new Dictionary(collect.stream()
                     .collect(ImmutableSet.toImmutableSet()));
         } catch (IOException e) {
             throw new RuntimeException("unable to load from dictionary", e);
