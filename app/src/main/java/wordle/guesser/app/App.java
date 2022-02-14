@@ -34,8 +34,36 @@ public class App {
                 Stopwatch timer = Stopwatch.createStarted();
                 secretDebugMode(knownState, guessScorer, dict, firstEnter);
                 System.out.println("Elapsed: " + timer.elapsed());
+            } else if (firstEnter.contains("HELP ME")) {
+                helpMe(knownState, guessScorer, dict, reader);
             } else {
                 playGame(knownState, guessScorer, dict, reader);
+            }
+        }
+    }
+
+    private static void helpMe(KnownState knownState, Guesser guessScorer, Dictionary dict, BufferedReader reader) throws IOException {
+        int n = 0;
+        while (true) {
+            guessScorer.process(dict, knownState);
+            Dictionary remaining = dict.filterToValid(knownState);
+            System.out.println("Current dictionary size: " + remaining.size());
+            System.out.println("What we know is: " + knownState);
+            if (remaining.size() < 100) {
+                System.out.println("Remaining words: " + Ordering.natural().sortedCopy(remaining.getWords()));
+            }
+            System.out.println("The current best guesses are: " + guessScorer.printState());
+            System.out.println("Your next guess is: " + guessScorer.getBestGuess());
+            System.out.println("What did you guess?");
+            String guess = reader.readLine().trim();
+            n++;
+            System.out.println("What was the output?");
+            String output = reader.readLine().trim();
+            if (output.equals("GGGGG")) {
+                System.out.println("Awesome! Took " + n + " guesses.");
+                return;
+            } else {
+                knownState.addGuess(guess, decode(output));
             }
         }
     }
