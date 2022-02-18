@@ -16,5 +16,9 @@ applicationDefaultJvmArgs = ["-Xms1024m", "-Xmx8192m"]
 
 application {
     // Define the main class for the application.
-    mainClass = 'wordle.guesser.app.DetermineFirstWord'
+    mainClass = 'wordle.guesser.app.App'
+}
+
+run {
+    standardInput = System.in
 }

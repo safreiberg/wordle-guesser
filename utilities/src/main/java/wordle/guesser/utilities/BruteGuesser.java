@@ -1,6 +1,7 @@
 package wordle.guesser.utilities;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterables;
 
@@ -18,7 +19,7 @@ public class BruteGuesser implements Guesser {
     public static boolean DEBUG_FORCE_SINGLE_THREAD = false;
     public static boolean DEBUG_SKIP_HARDCODED_ANSWER = false;
     // Scientifically chosen
-    private static final String BEST_FIRST_GUESS = "TARES";
+    private static final String BEST_FIRST_GUESS = "LARES";
     private final SortedMap<Integer, Set<String>> scoreToGuesses;
     private final int guessesToKeep;
     private final Dictionary rawDictionary;
@@ -99,7 +100,16 @@ public class BruteGuesser implements Guesser {
 
     @Override
     public String printState() {
-        return scoreToGuesses.toString();
+        StringBuilder sb = new StringBuilder();
+        scoreToGuesses.forEach((score, words) -> {
+            sb.append(score).append(": [");
+            if (words.size() < 50) {
+                sb.append(Joiner.on(", ").join(words)).append("], ");
+            } else {
+                sb.append(words.size()).append(" words in dict], ");
+            }
+        });
+        return sb.toString();
     }
 
 }
